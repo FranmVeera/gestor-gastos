@@ -17,6 +17,18 @@ function App() {
   const obtenerGastos = async () => {
     const respuesta = await fetch(API_URL);
     const datos = await respuesta.json();
+
+    if (
+      !Array.isArray(datos) ||
+      !datos.every(
+        gasto =>
+          typeof gasto.descripcion === 'string' &&
+          typeof gasto.monto === 'number'
+      )
+    ) {
+      throw new Error('Datos inválidos recibidos');
+    }
+
     setGastos(datos);
   };
 
@@ -49,9 +61,19 @@ function App() {
     evento.preventDefault();
 
     const metodo = gastoEditando ? 'PUT' : 'POST';
-    const url = gastoEditando
-      ? `${API_URL}/${gastoEditando}`
-      : API_URL;
+
+    let url = API_URL;
+
+    if (gastoEditando) {
+      const id = Number(gastoEditando);
+
+      if (!Number.isInteger(id) || id <= 0) {
+        alert('ID inválido');
+        return;
+      }
+
+      url = `${API_URL}/${id}`;
+    }
 
     await fetch(url, {
       method: metodo,
@@ -69,15 +91,23 @@ function App() {
   };
 
   const prepararEdicion = (gasto) => {
-    setGastoEditando(gasto.id);
+    const id = Number(gasto.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      alert('ID de gasto inválido');
+      return;
+    }
+
+    setGastoEditando(id);
 
     setFormulario({
-      descripcion: gasto.descripcion,
-      monto: gasto.monto,
-      categoria: gasto.categoria,
-      fecha: gasto.fecha
+      descripcion: String(gasto.descripcion || ''),
+      monto: Number(gasto.monto) || 0,
+      categoria: String(gasto.categoria || ''),
+      fecha: String(gasto.fecha || '')
     });
   };
+
 
   const eliminarGasto = async (id) => {
     await fetch(`${API_URL}/${id}`, {
