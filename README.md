@@ -1,4 +1,4 @@
-# Gestor de Gastos Personales
+# Proyecto Gestor de Gastos Personales
 
 Aplicación web para registrar, consultar, editar y eliminar gastos personales.
 
