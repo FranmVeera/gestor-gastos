@@ -31,8 +31,8 @@ jobs:
         working-directory: frontend
         run: npm test
 
-      - name: Analizar con SonarQube Cloud
-        uses: SonarSource/sonarqube-scan-action@v6
+      - name: Analizar con SonarCloud
+        uses: SonarSource/sonarcloud-github-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
