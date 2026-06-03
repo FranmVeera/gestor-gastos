@@ -6,7 +6,10 @@ const rutasGastos = require('./routes/gastoRoutes');
 const app = express();
 const PUERTO = 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173'
+}));
+app.disable('x-powered-by');
 app.use(express.json());
 
 app.get('/', (req, res) => {
