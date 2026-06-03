@@ -4,6 +4,8 @@ import { describe, expect, test, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import App from './App';
 
+const API_URL = 'http://localhost:3001/api/gastos';
+
 const gastosMock = [
   {
     id: 1,
@@ -21,7 +23,7 @@ const gastosMock = [
   }
 ];
 
-beforeEach(() => {
+const configurarFetch = () => {
   globalThis.fetch = vi.fn((url, options) => {
     if (!options) {
       return Promise.resolve({
@@ -30,56 +32,75 @@ beforeEach(() => {
     }
 
     return Promise.resolve({
-      json: () => Promise.resolve({
-        id: 3,
-        descripcion: 'Nuevo gasto',
-        monto: 10,
-        categoria: 'Otros',
-        fecha: '2026-06-03'
-      })
+      json: () =>
+        Promise.resolve({
+          id: 3,
+          descripcion: 'Nuevo gasto',
+          monto: 10,
+          categoria: 'Otros',
+          fecha: '2026-06-03'
+        })
     });
   });
+};
+
+const renderizarApp = async () => {
+  render(<App />);
+
+  await waitFor(() => {
+    expect(screen.getByText('Almuerzo')).toBeInTheDocument();
+  });
+};
+
+const seleccionarPrimerGastoParaEditar = async () => {
+  await renderizarApp();
+
+  const botonesEditar = screen.getAllByText('Editar');
+  await userEvent.click(botonesEditar[0]);
+};
+
+const esperarPeticion = async (url, metodo) => {
+  await waitFor(() => {
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({
+        method: metodo
+      })
+    );
+  });
+};
+
+beforeEach(() => {
+  configurarFetch();
 });
 
 describe('Gestor de Gastos', () => {
   test('muestra el título principal', async () => {
-    render(<App />);
+    await renderizarApp();
 
     expect(
       screen.getByText('Gestor de Gastos Personales')
     ).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText('Almuerzo')).toBeInTheDocument();
-    });
   });
 
   test('muestra el total gastado y cantidad de registros', async () => {
-    render(<App />);
+    await renderizarApp();
 
-    await waitFor(() => {
-      expect(screen.getByText('$6.50')).toBeInTheDocument();
-      expect(screen.getByText('2')).toBeInTheDocument();
-    });
+    expect(screen.getByText('$6.50')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   test('permite registrar un gasto', async () => {
-    render(<App />);
+    await renderizarApp();
 
     await userEvent.type(
       screen.getByPlaceholderText('Descripción del gasto'),
       'Cena'
     );
 
-    await userEvent.type(
-      screen.getByPlaceholderText('Monto'),
-      '12'
-    );
+    await userEvent.type(screen.getByPlaceholderText('Monto'), '12');
 
-    await userEvent.selectOptions(
-      screen.getByRole('combobox'),
-      'Comida'
-    );
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'Comida');
 
     const fecha = document.querySelector('input[type="date"]');
     await userEvent.type(fecha, '2026-06-04');
@@ -88,25 +109,11 @@ describe('Gestor de Gastos', () => {
       screen.getByRole('button', { name: 'Guardar gasto' })
     );
 
-    await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/api/gastos',
-        expect.objectContaining({
-          method: 'POST'
-        })
-      );
-    });
+    await esperarPeticion(API_URL, 'POST');
   });
 
   test('permite preparar la edición de un gasto', async () => {
-    render(<App />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Almuerzo')).toBeInTheDocument();
-    });
-
-    const botonesEditar = screen.getAllByText('Editar');
-    await userEvent.click(botonesEditar[0]);
+    await seleccionarPrimerGastoParaEditar();
 
     expect(screen.getByDisplayValue('Almuerzo')).toBeInTheDocument();
     expect(screen.getByDisplayValue('5')).toBeInTheDocument();
@@ -119,14 +126,7 @@ describe('Gestor de Gastos', () => {
   });
 
   test('permite actualizar un gasto', async () => {
-    render(<App />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Almuerzo')).toBeInTheDocument();
-    });
-
-    const botonesEditar = screen.getAllByText('Editar');
-    await userEvent.click(botonesEditar[0]);
+    await seleccionarPrimerGastoParaEditar();
 
     const descripcion = screen.getByDisplayValue('Almuerzo');
     await userEvent.clear(descripcion);
@@ -136,25 +136,11 @@ describe('Gestor de Gastos', () => {
       screen.getByRole('button', { name: 'Actualizar gasto' })
     );
 
-    await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/api/gastos/1',
-        expect.objectContaining({
-          method: 'PUT'
-        })
-      );
-    });
+    await esperarPeticion(`${API_URL}/1`, 'PUT');
   });
 
   test('permite cancelar la edición', async () => {
-    render(<App />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Almuerzo')).toBeInTheDocument();
-    });
-
-    const botonesEditar = screen.getAllByText('Editar');
-    await userEvent.click(botonesEditar[0]);
+    await seleccionarPrimerGastoParaEditar();
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Cancelar edición' })
@@ -166,22 +152,11 @@ describe('Gestor de Gastos', () => {
   });
 
   test('permite eliminar un gasto', async () => {
-    render(<App />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Almuerzo')).toBeInTheDocument();
-    });
+    await renderizarApp();
 
     const botonesEliminar = screen.getAllByText('Eliminar');
     await userEvent.click(botonesEliminar[0]);
 
-    await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/api/gastos/1',
-        expect.objectContaining({
-          method: 'DELETE'
-        })
-      );
-    });
+    await esperarPeticion(`${API_URL}/1`, 'DELETE');
   });
 });
