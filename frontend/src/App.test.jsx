@@ -27,11 +27,13 @@ const configurarFetch = () => {
   globalThis.fetch = vi.fn((url, options) => {
     if (!options) {
       return Promise.resolve({
+        ok: true,
         json: () => Promise.resolve(gastosMock)
       });
     }
 
     return Promise.resolve({
+      ok: true,
       json: () =>
         Promise.resolve({
           id: 3,
@@ -161,65 +163,66 @@ describe('Gestor de Gastos', () => {
   });
 
   test('muestra mensaje cuando no existen gastos registrados', async () => {
-  globalThis.fetch = vi.fn(() =>
-    Promise.resolve({
-      json: () => Promise.resolve([])
-    })
-  );
-
-  render(<App />);
-
-  await waitFor(() => {
-    expect(
-      screen.getByText('No hay gastos registrados.')
-    ).toBeInTheDocument();
-  });
-});
-
-  test('no permite editar un gasto con id inválido', async () => {
     globalThis.fetch = vi.fn(() =>
-        Promise.resolve({
-        json: () =>
-            Promise.resolve([
-            {
-                id: 'abc',
-                descripcion: 'Gasto inválido',
-                monto: 20,
-                categoria: 'Otros',
-                fecha: '2026-06-04'
-            }
-            ])
-        })
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([])
+      })
     );
 
     render(<App />);
 
     await waitFor(() => {
-        expect(screen.getByText('Gasto inválido')).toBeInTheDocument();
+      expect(
+        screen.getByText('No hay gastos registrados.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  test('no permite editar un gasto con id inválido', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 'abc',
+              descripcion: 'Gasto inválido',
+              monto: 20,
+              categoria: 'Otros',
+              fecha: '2026-06-04'
+            }
+          ])
+      })
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Gasto inválido')).toBeInTheDocument();
     });
 
     const botonesEditar = screen.getAllByText('Editar');
     await userEvent.click(botonesEditar[0]);
 
     expect(
-        screen.getByRole('button', { name: 'Guardar gasto' })
+      screen.getByRole('button', { name: 'Guardar gasto' })
     ).toBeInTheDocument();
-    });
+  });
 
-    test('no actualiza si el id del gasto editando es inválido', async () => {
+  test('no actualiza si el id del gasto editando es inválido', async () => {
     await seleccionarPrimerGastoParaEditar();
 
     const descripcion = screen.getByDisplayValue('Almuerzo');
     await userEvent.clear(descripcion);
     await userEvent.type(descripcion, 'Cambio inválido');
 
-    // Forzamos un caso de cancelación y vuelta al estado inicial
     await userEvent.click(
-        screen.getByRole('button', { name: 'Cancelar edición' })
+      screen.getByRole('button', { name: 'Cancelar edición' })
     );
 
     expect(
-        screen.getByRole('button', { name: 'Guardar gasto' })
+      screen.getByRole('button', { name: 'Guardar gasto' })
     ).toBeInTheDocument();
-    });
+  });
 });
