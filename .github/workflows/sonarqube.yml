@@ -18,7 +18,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias del frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Ejecutar pruebas del frontend
+        working-directory: frontend
+        run: npm test
+
       - name: Analizar con SonarQube Cloud
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
